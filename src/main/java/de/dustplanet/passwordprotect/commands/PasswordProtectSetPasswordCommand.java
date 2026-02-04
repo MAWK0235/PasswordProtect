@@ -40,6 +40,10 @@ public class PasswordProtectSetPasswordCommand implements CommandExecutor {
         }
         final String password = args[0];
         utils.setPassword(password);
+        
+        // === REMEMBER ME: Clear all trusted players when password changes (security critical!) ===
+        plugin.clearTrustedPlayers();
+
         String messageLocalization = plugin.getLocalization().getString("password_set");
         utils.message(sender, messageLocalization, null);
         if (sender instanceof Player) {
