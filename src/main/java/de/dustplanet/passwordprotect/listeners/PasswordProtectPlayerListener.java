@@ -58,6 +58,19 @@ public class PasswordProtectPlayerListener implements Listener {
     @SuppressWarnings("checkstyle:MissingJavadocMethod")
     public void onPlayerJoin(final PlayerJoinEvent event) {
         final Player player = event.getPlayer();
+        
+        // === REMEMBER ME: Skip jail for trusted players ===
+        if (plugin.isPlayerTrusted(player.getUniqueId())) {
+            // Remove any lingering jail effects just in case
+            if (player.hasPotionEffect(PotionEffectType.BLINDNESS)) {
+                player.removePotionEffect(PotionEffectType.BLINDNESS);
+            }
+            if (player.hasPotionEffect(PotionEffectType.SLOW)) {
+                player.removePotionEffect(PotionEffectType.SLOW);
+            }
+            return; // Skip all jail logic
+        }
+        
         jailHelper.check(player);
     }
 
@@ -151,6 +164,15 @@ public class PasswordProtectPlayerListener implements Listener {
         final Player player = event.getPlayer();
         final UUID playerUUID = event.getPlayer().getUniqueId();
         final String message = event.getMessage();
+        
+        // === REMEMBER ME: Skip /login processing for trusted players ===
+        if (plugin.isPlayerTrusted(playerUUID) && message.toLowerCase(Locale.ENGLISH).startsWith("/login")) {
+            final String messageLocalization = plugin.getLocalization().getString("already_logged_in", "&aYou are already logged in!");
+            utils.message(player, messageLocalization, null);
+            event.setCancelled(true);
+            return;
+        }
+
         String command = message.replaceFirst("/", "");
         if (command.contains(" ")) {
             command = command.substring(0, command.indexOf(' '));
@@ -171,6 +193,10 @@ public class PasswordProtectPlayerListener implements Listener {
             password = utils.hash(password);
             if (password.equals(utils.getPassword())) {
                 loginPlayer(player, playerUUID);
+                
+                // === REMEMBER ME: Trust player after successful login ===
+                plugin.trustPlayer(playerUUID);
+                
                 event.setCancelled(true);
                 return;
             }
@@ -200,7 +226,7 @@ public class PasswordProtectPlayerListener implements Listener {
             }
             event.setCancelled(true);
         } else if (message.toLowerCase(Locale.ENGLISH).startsWith("/login")) {
-            final String messageLocalization = plugin.getLocalization().getString("already_logged_in");
+            final String messageLocalization = plugin.getLocalization().getString("already_logged_in", "&aYou are already logged in!");
             utils.message(player, messageLocalization, null);
             event.setCancelled(true);
         }
