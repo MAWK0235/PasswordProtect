@@ -33,7 +33,22 @@ public class PasswordProtectLoginCommand implements CommandExecutor {
         if (!(sender instanceof Player)) {
             final String messageLocalization = plugin.getLocalization().getString("no_login_console");
             utils.message(sender, messageLocalization, null);
+            return true;
         }
+        
+        final Player player = (Player) sender;
+        
+        // === REMEMBER ME: Skip login for trusted players ===
+        if (plugin.isPlayerTrusted(player.getUniqueId())) {
+            final String messageLocalization = plugin.getLocalization().getString("already_logged_in", "&aYou are already logged in!");
+            utils.message(player, messageLocalization, null);
+            return true;
+        }
+        
+        // Inform player to type password in chat (actual validation happens in PlayerListener)
+        final String messageLocalization = plugin.getLocalization().getString("login_prompt", "&aPlease type your password in chat to log in.");
+        utils.message(player, messageLocalization, null);
+        
         return true;
     }
 }
