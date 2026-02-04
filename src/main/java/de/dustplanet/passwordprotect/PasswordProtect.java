@@ -48,6 +48,12 @@ public class PasswordProtect extends JavaPlugin {
     private File jailedPlayersFile;
     @Getter
     private final PasswordProtectUtilities utils = new PasswordProtectUtilities(this);
+    
+    // === REMEMBER ME FEATURE - NEW FIELDS ===
+    @Getter
+    @Setter
+    private FileConfiguration trustedPlayers;
+    private File trustedPlayersFile;
 
     @Override
     @SuppressFBWarnings({ "NP_UNWRITTEN_FIELD", "UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR" })
@@ -68,6 +74,15 @@ public class PasswordProtect extends JavaPlugin {
             obj.writeObject(jailHelper.getJailedPlayers());
         } catch (final IOException e) {
             getLogger().log(Level.INFO, "Couldn't find the 'jailedPlayers.dat' file!", e);
+        }
+
+        // === REMEMBER ME: Save trusted players on shutdown ===
+        if (trustedPlayers != null && trustedPlayersFile != null) {
+            try {
+                trustedPlayers.save(trustedPlayersFile);
+            } catch (IOException e) {
+                getLogger().log(Level.WARNING, "Failed to save trusted players", e);
+            }
         }
 
         jailHelper.clear();
@@ -109,6 +124,17 @@ public class PasswordProtect extends JavaPlugin {
         utils.loadLocalization(getLocalization(), localizationFile);
 
         loadJailedPlayers();
+
+        // === REMEMBER ME: Initialize trusted players storage ===
+        trustedPlayersFile = new File(getDataFolder(), "trusted_players.yml");
+        if (!trustedPlayersFile.exists()) {
+            try {
+                trustedPlayersFile.createNewFile();
+            } catch (final IOException e) {
+                getLogger().log(Level.WARNING, "Could not create trusted_players.yml", e);
+            }
+        }
+        trustedPlayers = ScalarYamlConfiguration.loadConfiguration(trustedPlayersFile);
 
         utils.registerCommands(jailHelper);
 
@@ -164,4 +190,26 @@ public class PasswordProtect extends JavaPlugin {
         }
     }
 
+    // === REMEMBER ME FEATURE - CORE METHODS ===
+    public boolean isPlayerTrusted(UUID uuid) {
+        return trustedPlayers.contains(uuid.toString());
+    }
+
+    public void trustPlayer(UUID uuid) {
+        trustedPlayers.set(uuid.toString(), true);
+        try {
+            trustedPlayers.save(trustedPlayersFile);
+        } catch (IOException e) {
+            getLogger().log(Level.WARNING, "Failed to save trusted player", e);
+        }
+    }
+
+    public void clearTrustedPlayers() {
+        trustedPlayers = new ScalarYamlConfiguration();
+        try {
+            trustedPlayers.save(trustedPlayersFile);
+        } catch (IOException e) {
+            getLogger().log(Level.WARNING, "Failed to clear trusted players", e);
+        }
+    }
 }
